@@ -1,15 +1,17 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowRight } from "lucide-react"
 import { scenarios } from "@/data/scenarios"
 import { useGameStore } from "@/store/useGameStore"
+import { cosmetics } from "@/data/cosmetics"
 import type { Option } from "@/types"
 
 export default function TheaterPlay() {
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const navigate = useNavigate()
   const completeScenario = useGameStore((s) => s.completeScenario)
+  const userProfile = useGameStore((s) => s.userProfile)
 
   const scenario = scenarios.find((s) => s.id === scenarioId)
 
@@ -17,6 +19,32 @@ export default function TheaterPlay() {
   const [choices, setChoices] = useState<{ sceneId: string; optionId: string }[]>([])
   const [showFeedback, setShowFeedback] = useState(false)
   const [selectedOption, setSelectedOption] = useState<Option | null>(null)
+
+  const characterDescription = useMemo(() => {
+    if (!userProfile) return ""
+    const equipped = userProfile.equippedCosmetics
+    const items: string[] = []
+
+    if (equipped.hat) {
+      const hat = cosmetics.find((c) => c.id === equipped.hat)
+      if (hat) items.push(`戴着${hat.name}${hat.emoji}`)
+    }
+    if (equipped.cape) {
+      const cape = cosmetics.find((c) => c.id === equipped.cape)
+      if (cape) items.push(`披着${cape.name}${cape.emoji}`)
+    }
+    if (equipped.accessory) {
+      const accessory = cosmetics.find((c) => c.id === equipped.accessory)
+      if (accessory) items.push(`佩戴${accessory.name}${accessory.emoji}`)
+    }
+    if (equipped.frame) {
+      const frame = cosmetics.find((c) => c.id === equipped.frame)
+      if (frame) items.push(`有着${frame.name}装饰`)
+    }
+
+    if (items.length === 0) return ""
+    return `（你今天${items.join("，")}）`
+  }, [userProfile])
 
   if (!scenario) {
     return (
@@ -90,6 +118,11 @@ export default function TheaterPlay() {
               <p className="font-body leading-relaxed text-adventure-blue">
                 {currentScene.narration}
               </p>
+              {characterDescription && (
+                <p className="mt-3 text-sm text-adventure-orange font-body italic">
+                  {characterDescription}
+                </p>
+              )}
             </div>
 
             {!showFeedback && (

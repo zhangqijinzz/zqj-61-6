@@ -12,6 +12,7 @@ import Contract from "@/pages/Contract";
 import MiniGame from "@/pages/MiniGame";
 import TreeHole from "@/pages/TreeHole";
 import TreeHolePost from "@/pages/TreeHolePost";
+import Cosmetics from "@/pages/Cosmetics";
 
 function LayoutWrapper() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/contract/mini-game/:gameId" element={<MiniGame />} />
           <Route path="/tree-hole" element={<TreeHole />} />
           <Route path="/tree-hole/:postId" element={<TreeHolePost />} />
+          <Route path="/cosmetics" element={<Cosmetics />} />
         </Route>
       </Routes>
     </Router>

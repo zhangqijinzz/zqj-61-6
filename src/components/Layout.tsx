@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Home, Drama, Lightbulb, FileText, MessageCircle } from "lucide-react";
+import { Home, Drama, Lightbulb, FileText, MessageCircle, Palette } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGameStore } from "@/store/useGameStore";
 
@@ -9,10 +9,12 @@ const navItems = [
   { to: "/skills", label: "技能树", icon: Lightbulb },
   { to: "/contract", label: "任务契约", icon: FileText },
   { to: "/tree-hole", label: "匿名树洞", icon: MessageCircle },
+  { to: "/cosmetics", label: "装扮小屋", icon: Palette },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const userProfile = useGameStore((s) => s.userProfile);
+  const hasNewCosmetics = userProfile && userProfile.unlockedCosmetics.length > 0 && !userProfile.hasVisitedCosmetics;
 
   return (
     <div className="min-h-screen bg-adventure-cream">
@@ -50,29 +52,41 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
         <div className="flex items-center justify-around max-w-lg mx-auto py-2">
-          {navItems.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 px-2 py-1 transition-all duration-200 ${
-                  isActive
-                    ? "text-adventure-orange scale-105"
-                    : "text-adventure-blue/50"
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon className="w-5 h-5" />
-                  <span className="text-[10px] font-body">{label}</span>
-                  {isActive && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-adventure-orange mt-0.5" />
-                  )}
-                </>
-              )}
-            </NavLink>
-          ))}
+          {navItems.map(({ to, label, icon: Icon }) => {
+            const showBadge = to === "/cosmetics" && hasNewCosmetics;
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  `flex flex-col items-center gap-0.5 px-2 py-1 transition-all duration-200 relative ${
+                    isActive
+                      ? "text-adventure-orange scale-105"
+                      : "text-adventure-blue/50"
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <div className="relative">
+                      <Icon className="w-5 h-5" />
+                      {showBadge && (
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"
+                        />
+                      )}
+                    </div>
+                    <span className="text-[10px] font-body">{label}</span>
+                    {isActive && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-adventure-orange mt-0.5" />
+                    )}
+                  </>
+                )}
+              </NavLink>
+            );
+          })}
         </div>
       </nav>
     </div>

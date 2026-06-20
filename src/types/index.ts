@@ -1,5 +1,28 @@
 export type CharacterType = "knight" | "warrior" | "guardian" | "ranger"
 
+export type CosmeticCategory = "hat" | "cape" | "frame" | "accessory"
+
+export interface CosmeticItem {
+  id: string
+  name: string
+  description: string
+  category: CosmeticCategory
+  emoji: string
+  unlockCondition: {
+    type: "scenario" | "skill" | "streak" | "level" | "badge"
+    target: string | number
+  }
+  rarity: "common" | "rare" | "epic" | "legendary"
+  unlockedAt?: string
+}
+
+export interface EquippedCosmetics {
+  hat: string | null
+  cape: string | null
+  frame: string | null
+  accessory: string | null
+}
+
 export interface UserProfile {
   id: string
   characterType: CharacterType
@@ -11,6 +34,11 @@ export interface UserProfile {
   unlockedSkills: string[]
   completedMissions: string[]
   earnedBadges: string[]
+  unlockedCosmetics: string[]
+  equippedCosmetics: EquippedCosmetics
+  hasVisitedCosmetics: boolean
+  consecutiveCheckInDays: number
+  lastCheckInDate: string | null
 }
 
 export interface Scenario {

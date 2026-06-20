@@ -1,6 +1,8 @@
 import { create } from 'zustand'
-import { UserProfile, CharacterType, ScenarioResult, Mission, TreeHolePost, Reply } from '@/types'
+import { UserProfile, CharacterType, ScenarioResult, Mission, TreeHolePost, Reply, CosmeticCategory, EquippedCosmetics, Scenario } from '@/types'
 import { treeHolePosts } from '@/data/treeHolePosts'
+import { cosmetics } from '@/data/cosmetics'
+import { scenarios as allScenarios } from '@/data/scenarios'
 
 const STORAGE_KEY = 'dad-adventure-state'
 
@@ -49,11 +51,90 @@ interface GameActions {
   addReplyToPost: (postId: string, reply: Reply) => void
   togglePostLike: (postId: string) => void
   resetGame: () => void
+  equipCosmetic: (cosmeticId: string) => void
+  unequipCosmetic: (category: CosmeticCategory) => void
+  markVisitedCosmetics: () => void
+  checkAndUnlockCosmetics: () => string[]
+  checkInDaily: () => { success: boolean; streak: number; newCosmetics: string[] }
 }
 
 type StoreType = GameState & GameActions
 
+function checkCosmeticUnlocks(
+  profile: UserProfile
+): string[] {
+  const newlyUnlocked: string[] = []
+  const now = new Date().toISOString()
+
+  for (const cosmetic of cosmetics) {
+    if (profile.unlockedCosmetics.includes(cosmetic.id)) continue
+
+    let unlocked = false
+    const { type, target } = cosmetic.unlockCondition
+
+    switch (type) {
+      case 'level':
+        unlocked = profile.level >= (target as number)
+        break
+      case 'scenario':
+        if (target === 'all') {
+          unlocked = profile.completedScenarios.length >= allScenarios.length
+        } else {
+          unlocked = profile.completedScenarios.length >= (target as number)
+        }
+        break
+      case 'skill':
+        if (target === 'all') {
+          unlocked = profile.unlockedSkills.length >= 10
+        } else {
+          unlocked = profile.unlockedSkills.length >= (target as number)
+        }
+        break
+      case 'streak':
+        unlocked = profile.consecutiveCheckInDays >= (target as number)
+        break
+      case 'badge':
+        unlocked = profile.earnedBadges.length >= parseInt(target as string)
+        break
+    }
+
+    if (unlocked) {
+      newlyUnlocked.push(cosmetic.id)
+    }
+  }
+
+  return newlyUnlocked
+}
+
+function migrateProfile(profile: UserProfile): UserProfile {
+  if (!profile.unlockedCosmetics) {
+    profile.unlockedCosmetics = []
+  }
+  if (!profile.equippedCosmetics) {
+    profile.equippedCosmetics = {
+      hat: null,
+      cape: null,
+      frame: null,
+      accessory: null,
+    }
+  }
+  if (profile.hasVisitedCosmetics === undefined) {
+    profile.hasVisitedCosmetics = false
+  }
+  if (profile.consecutiveCheckInDays === undefined) {
+    profile.consecutiveCheckInDays = 0
+  }
+  if (profile.lastCheckInDate === undefined) {
+    profile.lastCheckInDate = null
+  }
+  return profile
+}
+
 const savedState = loadFromLocalStorage()
+
+if (savedState?.userProfile) {
+  savedState.userProfile = migrateProfile(savedState.userProfile)
+}
 
 export const useGameStore = create<StoreType>()((set, get) => ({
   userProfile: savedState?.userProfile ?? null,
@@ -73,6 +154,16 @@ export const useGameStore = create<StoreType>()((set, get) => ({
       unlockedSkills: [],
       completedMissions: [],
       earnedBadges: [],
+      unlockedCosmetics: [],
+      equippedCosmetics: {
+        hat: null,
+        cape: null,
+        frame: null,
+        accessory: null,
+      },
+      hasVisitedCosmetics: false,
+      consecutiveCheckInDays: 0,
+      lastCheckInDate: null,
     }
     set({ userProfile: profile })
     saveToLocalStorage(get())
@@ -90,14 +181,22 @@ export const useGameStore = create<StoreType>()((set, get) => ({
 
     const newLevel = state.userProfile.level + 1
     const newTitle = getTitleByLevel(newLevel)
+    const newCompletedScenarios = [...state.userProfile.completedScenarios, scenarioId]
+
+    const profileWithScenario: UserProfile = {
+      ...state.userProfile,
+      level: newLevel,
+      title: newTitle,
+      completedScenarios: newCompletedScenarios,
+    }
+
+    const newlyUnlocked = checkCosmeticUnlocks(profileWithScenario)
 
     set({
       scenarioResults: [...state.scenarioResults, result],
       userProfile: {
-        ...state.userProfile,
-        level: newLevel,
-        title: newTitle,
-        completedScenarios: [...state.userProfile.completedScenarios, scenarioId],
+        ...profileWithScenario,
+        unlockedCosmetics: [...state.userProfile.unlockedCosmetics, ...newlyUnlocked],
       },
     })
     saveToLocalStorage(get())
@@ -109,14 +208,23 @@ export const useGameStore = create<StoreType>()((set, get) => ({
 
     const newLevel = state.userProfile.level + 1
     const newTitle = getTitleByLevel(newLevel)
+    const newUnlockedSkills = [...state.userProfile.unlockedSkills, skillId]
+    const newEarnedBadges = [...state.userProfile.earnedBadges, `${skillId}-badge`]
+
+    const profileWithSkill: UserProfile = {
+      ...state.userProfile,
+      level: newLevel,
+      title: newTitle,
+      unlockedSkills: newUnlockedSkills,
+      earnedBadges: newEarnedBadges,
+    }
+
+    const newlyUnlocked = checkCosmeticUnlocks(profileWithSkill)
 
     set({
       userProfile: {
-        ...state.userProfile,
-        level: newLevel,
-        title: newTitle,
-        unlockedSkills: [...state.userProfile.unlockedSkills, skillId],
-        earnedBadges: [...state.userProfile.earnedBadges, `${skillId}-badge`],
+        ...profileWithSkill,
+        unlockedCosmetics: [...state.userProfile.unlockedCosmetics, ...newlyUnlocked],
       },
     })
     saveToLocalStorage(get())
@@ -215,5 +323,126 @@ export const useGameStore = create<StoreType>()((set, get) => ({
       posts: treeHolePosts,
     })
     localStorage.removeItem(STORAGE_KEY)
+  },
+
+  equipCosmetic: (cosmeticId) => {
+    const state = get()
+    if (!state.userProfile) return
+
+    const cosmetic = cosmetics.find((c) => c.id === cosmeticId)
+    if (!cosmetic) return
+    if (!state.userProfile.unlockedCosmetics.includes(cosmeticId)) return
+
+    const newEquipped: EquippedCosmetics = {
+      ...state.userProfile.equippedCosmetics,
+      [cosmetic.category]: cosmeticId,
+    }
+
+    set({
+      userProfile: {
+        ...state.userProfile,
+        equippedCosmetics: newEquipped,
+      },
+    })
+    saveToLocalStorage(get())
+  },
+
+  unequipCosmetic: (category) => {
+    const state = get()
+    if (!state.userProfile) return
+
+    const newEquipped: EquippedCosmetics = {
+      ...state.userProfile.equippedCosmetics,
+      [category]: null,
+    }
+
+    set({
+      userProfile: {
+        ...state.userProfile,
+        equippedCosmetics: newEquipped,
+      },
+    })
+    saveToLocalStorage(get())
+  },
+
+  markVisitedCosmetics: () => {
+    const state = get()
+    if (!state.userProfile) return
+
+    set({
+      userProfile: {
+        ...state.userProfile,
+        hasVisitedCosmetics: true,
+      },
+    })
+    saveToLocalStorage(get())
+  },
+
+  checkAndUnlockCosmetics: () => {
+    const state = get()
+    if (!state.userProfile) return []
+
+    const newlyUnlocked = checkCosmeticUnlocks(state.userProfile)
+
+    if (newlyUnlocked.length > 0) {
+      set({
+        userProfile: {
+          ...state.userProfile,
+          unlockedCosmetics: [...state.userProfile.unlockedCosmetics, ...newlyUnlocked],
+        },
+      })
+      saveToLocalStorage(get())
+    }
+
+    return newlyUnlocked
+  },
+
+  checkInDaily: () => {
+    const state = get()
+    if (!state.userProfile) {
+      return { success: false, streak: 0, newCosmetics: [] }
+    }
+
+    const today = new Date()
+    const todayStr = today.toISOString().split('T')[0]
+    const lastCheckIn = state.userProfile.lastCheckInDate
+
+    let newStreak = state.userProfile.consecutiveCheckInDays
+
+    if (lastCheckIn) {
+      const lastDate = new Date(lastCheckIn)
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+      const yesterdayStr = yesterday.toISOString().split('T')[0]
+      const lastDateStr = lastDate.toISOString().split('T')[0]
+
+      if (lastDateStr === todayStr) {
+        return { success: false, streak: newStreak, newCosmetics: [] }
+      } else if (lastDateStr === yesterdayStr) {
+        newStreak += 1
+      } else {
+        newStreak = 1
+      }
+    } else {
+      newStreak = 1
+    }
+
+    const profileWithCheckIn: UserProfile = {
+      ...state.userProfile,
+      consecutiveCheckInDays: newStreak,
+      lastCheckInDate: today.toISOString(),
+    }
+
+    const newlyUnlocked = checkCosmeticUnlocks(profileWithCheckIn)
+
+    set({
+      userProfile: {
+        ...profileWithCheckIn,
+        unlockedCosmetics: [...state.userProfile.unlockedCosmetics, ...newlyUnlocked],
+      },
+    })
+    saveToLocalStorage(get())
+
+    return { success: true, streak: newStreak, newCosmetics: newlyUnlocked }
   },
 }))

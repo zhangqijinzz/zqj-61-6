@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { motion } from "framer-motion"
-import { MessageCircle } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { MessageCircle, Palette, X } from "lucide-react"
 import { useGameStore } from "@/store/useGameStore"
 import { scenarios } from "@/data/scenarios"
 import { skills } from "@/data/skills"
@@ -26,12 +26,34 @@ export default function Home() {
   const navigate = useNavigate()
   const userProfile = useGameStore((s) => s.userProfile)
   const missions = useGameStore((s) => s.missions)
+  const checkAndUnlockCosmetics = useGameStore((s) => s.checkAndUnlockCosmetics)
+  const checkInDaily = useGameStore((s) => s.checkInDaily)
+
+  const [showGuide, setShowGuide] = useState(false)
+  const [showCheckInSuccess, setShowCheckInSuccess] = useState<{ streak: number; newCosmetics: string[] } | null>(null)
 
   useEffect(() => {
     if (!userProfile) {
       navigate("/")
+      return
     }
-  }, [userProfile, navigate])
+
+    checkAndUnlockCosmetics()
+
+    const shouldShowGuide =
+      userProfile.unlockedCosmetics.length > 0 &&
+      !userProfile.hasVisitedCosmetics
+
+    setShowGuide(shouldShowGuide)
+  }, [userProfile, navigate, checkAndUnlockCosmetics])
+
+  const handleCheckIn = () => {
+    const result = checkInDaily()
+    if (result.success) {
+      setShowCheckInSuccess({ streak: result.streak, newCosmetics: result.newCosmetics })
+      setTimeout(() => setShowCheckInSuccess(null), 3000)
+    }
+  }
 
   const scenarioProgress = useMemo(
     () =>
@@ -93,8 +115,11 @@ export default function Home() {
         animate="visible"
       >
         <motion.section variants={staggerItem}>
-          <div className="bg-gradient-to-b from-adventure-blue to-adventure-blue-light rounded-b-3xl p-8">
-            <div className="max-w-lg mx-auto flex items-center gap-4">
+          <div className="bg-gradient-to-b from-adventure-blue to-adventure-blue-light rounded-b-3xl p-8 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12" />
+
+            <div className="max-w-lg mx-auto flex items-center gap-4 relative z-10">
               <CharacterAvatar characterType={userProfile.characterType} size="lg" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -108,9 +133,20 @@ export default function Home() {
                 <p className="text-white/80 font-body text-sm">
                   {userProfile.title}
                 </p>
+                <button
+                  onClick={handleCheckIn}
+                  className="mt-2 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full text-white text-xs font-body transition-colors flex items-center gap-1 w-fit"
+                >
+                  📅 每日打卡
+                  {userProfile.consecutiveCheckInDays > 0 && (
+                    <span className="bg-adventure-gold text-adventure-blue px-1.5 rounded-full text-[10px] font-bold">
+                      {userProfile.consecutiveCheckInDays}天
+                    </span>
+                  )}
+                </button>
               </div>
             </div>
-            <p className="text-center text-white/70 font-body text-sm mt-6">
+            <p className="text-center text-white/70 font-body text-sm mt-6 relative z-10">
               ✨ 每一天的陪伴，都是最珍贵的冒险 ✨
             </p>
           </div>
@@ -242,6 +278,84 @@ export default function Home() {
           </div>
         </motion.section>
       </motion.div>
+
+      <AnimatePresence>
+        {showGuide && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-28 left-4 right-4 max-w-lg mx-auto z-40"
+          >
+            <div className="bg-gradient-to-r from-adventure-orange to-adventure-gold rounded-2xl p-4 shadow-lg text-white relative overflow-hidden">
+              <div className="absolute -top-4 -right-4 w-20 h-20 bg-white/20 rounded-full" />
+              <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-white/10 rounded-full" />
+
+              <button
+                onClick={() => setShowGuide(false)}
+                className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/20 flex items-center justify-center z-10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-start gap-3 relative z-10">
+                <motion.div
+                  animate={{ rotate: [0, -10, 10, -10, 0] }}
+                  transition={{ repeat: Infinity, repeatDelay: 2, duration: 0.5 }}
+                  className="shrink-0"
+                >
+                  <Palette className="w-10 h-10" />
+                </motion.div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-display text-lg mb-1">🎨 新功能上线！</h3>
+                  <p className="font-body text-sm text-white/90 mb-3">
+                    你获得了新装扮道具，快去装扮小屋打造你的专属形象吧！
+                  </p>
+                  <button
+                    onClick={() => {
+                      setShowGuide(false)
+                      navigate("/cosmetics")
+                    }}
+                    className="bg-white text-adventure-orange px-4 py-2 rounded-full font-display text-sm hover:bg-white/90 transition-colors"
+                  >
+                    立即体验 →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showCheckInSuccess && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50"
+          >
+            <div className="bg-adventure-teal text-white px-8 py-6 rounded-2xl text-center shadow-xl">
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ repeat: Infinity, duration: 1 }}
+                className="text-4xl mb-2"
+              >
+                ✅
+              </motion.div>
+              <h3 className="font-display text-xl mb-1">打卡成功！</h3>
+              <p className="font-body text-sm text-white/90">
+                已连续打卡 {showCheckInSuccess.streak} 天
+              </p>
+              {showCheckInSuccess.newCosmetics.length > 0 && (
+                <p className="font-body text-sm text-adventure-gold mt-2">
+                  🎁 解锁了 {showCheckInSuccess.newCosmetics.length} 件新装扮！
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -47,6 +47,7 @@ export default {
         "bounce-slow": "bounce 2s ease-in-out infinite",
         "wiggle": "wiggle 1s ease-in-out infinite",
         "shimmer": "shimmer 2s linear infinite",
+        "rainbow-border": "rainbowBorder 3s linear infinite",
       },
       keyframes: {
         float: {
@@ -64,6 +65,13 @@ export default {
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
+        },
+        rainbowBorder: {
+          "0%": { boxShadow: "0 0 0 4px #FF6B6B, 0 0 8px rgba(255, 107, 107, 0.5)" },
+          "25%": { boxShadow: "0 0 0 4px #4ECDC4, 0 0 8px rgba(78, 205, 196, 0.5)" },
+          "50%": { boxShadow: "0 0 0 4px #FFD93D, 0 0 8px rgba(255, 217, 61, 0.5)" },
+          "75%": { boxShadow: "0 0 0 4px #FFB5C2, 0 0 8px rgba(255, 181, 194, 0.5)" },
+          "100%": { boxShadow: "0 0 0 4px #FF6B6B, 0 0 8px rgba(255, 107, 107, 0.5)" },
         },
       },
     },
