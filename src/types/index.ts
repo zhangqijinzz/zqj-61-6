@@ -36,7 +36,8 @@ export interface UserProfile {
   earnedBadges: string[]
   unlockedCosmetics: string[]
   equippedCosmetics: EquippedCosmetics
-  hasVisitedCosmetics: boolean
+  lastSeenCosmeticsCount: number
+  dismissedCosmeticsGuide: boolean
   consecutiveCheckInDays: number
   lastCheckInDate: string | null
 }
@@ -102,6 +103,7 @@ export interface TreeHolePost {
   replies: Reply[]
   createdAt: string
   likes: number
+  authorEquippedCosmetics?: EquippedCosmetics
 }
 
 export interface Reply {
@@ -110,6 +112,7 @@ export interface Reply {
   authorNickname: string
   content: string
   createdAt: string
+  authorEquippedCosmetics?: EquippedCosmetics
 }
 
 export interface ScenarioResult {

@@ -70,6 +70,7 @@ export default function TreeHolePost() {
       authorNickname: userProfile.nickname,
       content: replyContent.trim(),
       createdAt: new Date().toISOString(),
+      authorEquippedCosmetics: { ...userProfile.equippedCosmetics },
     }
     addReplyToPost(post.id, reply)
     setReplyContent("")
@@ -107,6 +108,7 @@ export default function TreeHolePost() {
             <CharacterAvatar
               characterType={post.authorCharacter}
               size="md"
+              equippedCosmetics={post.authorEquippedCosmetics ?? null}
             />
             <div>
               <span className="font-display text-lg text-adventure-blue block">
@@ -167,6 +169,7 @@ export default function TreeHolePost() {
                 <CharacterAvatar
                   characterType={reply.authorCharacter}
                   size="sm"
+                  equippedCosmetics={reply.authorEquippedCosmetics ?? null}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">

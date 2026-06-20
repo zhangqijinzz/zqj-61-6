@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { UserProfile, CharacterType, ScenarioResult, Mission, TreeHolePost, Reply, CosmeticCategory, EquippedCosmetics, Scenario } from '@/types'
+import { UserProfile, CharacterType, ScenarioResult, Mission, TreeHolePost, Reply, CosmeticCategory, EquippedCosmetics } from '@/types'
 import { treeHolePosts } from '@/data/treeHolePosts'
 import { cosmetics } from '@/data/cosmetics'
 import { scenarios as allScenarios } from '@/data/scenarios'
@@ -53,7 +53,8 @@ interface GameActions {
   resetGame: () => void
   equipCosmetic: (cosmeticId: string) => void
   unequipCosmetic: (category: CosmeticCategory) => void
-  markVisitedCosmetics: () => void
+  markCosmeticsSeen: () => void
+  dismissCosmeticsGuide: () => void
   checkAndUnlockCosmetics: () => string[]
   checkInDaily: () => { success: boolean; streak: number; newCosmetics: string[] }
 }
@@ -64,7 +65,6 @@ function checkCosmeticUnlocks(
   profile: UserProfile
 ): string[] {
   const newlyUnlocked: string[] = []
-  const now = new Date().toISOString()
 
   for (const cosmetic of cosmetics) {
     if (profile.unlockedCosmetics.includes(cosmetic.id)) continue
@@ -118,8 +118,13 @@ function migrateProfile(profile: UserProfile): UserProfile {
       accessory: null,
     }
   }
-  if (profile.hasVisitedCosmetics === undefined) {
-    profile.hasVisitedCosmetics = false
+  if (profile.lastSeenCosmeticsCount === undefined) {
+    const legacyProfile = profile as { hasVisitedCosmetics?: boolean }
+    profile.lastSeenCosmeticsCount = legacyProfile.hasVisitedCosmetics ? profile.unlockedCosmetics.length : 0
+    delete legacyProfile.hasVisitedCosmetics
+  }
+  if (profile.dismissedCosmeticsGuide === undefined) {
+    profile.dismissedCosmeticsGuide = false
   }
   if (profile.consecutiveCheckInDays === undefined) {
     profile.consecutiveCheckInDays = 0
@@ -161,7 +166,8 @@ export const useGameStore = create<StoreType>()((set, get) => ({
         frame: null,
         accessory: null,
       },
-      hasVisitedCosmetics: false,
+      lastSeenCosmeticsCount: 0,
+      dismissedCosmeticsGuide: false,
       consecutiveCheckInDays: 0,
       lastCheckInDate: null,
     }
@@ -365,14 +371,29 @@ export const useGameStore = create<StoreType>()((set, get) => ({
     saveToLocalStorage(get())
   },
 
-  markVisitedCosmetics: () => {
+  markCosmeticsSeen: () => {
     const state = get()
     if (!state.userProfile) return
 
     set({
       userProfile: {
         ...state.userProfile,
-        hasVisitedCosmetics: true,
+        lastSeenCosmeticsCount: state.userProfile.unlockedCosmetics.length,
+        dismissedCosmeticsGuide: true,
+      },
+    })
+    saveToLocalStorage(get())
+  },
+
+  dismissCosmeticsGuide: () => {
+    const state = get()
+    if (!state.userProfile) return
+
+    set({
+      userProfile: {
+        ...state.userProfile,
+        dismissedCosmeticsGuide: true,
+        lastSeenCosmeticsCount: state.userProfile.unlockedCosmetics.length,
       },
     })
     saveToLocalStorage(get())

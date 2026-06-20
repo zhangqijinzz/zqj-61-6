@@ -24,6 +24,7 @@ interface CharacterAvatarProps {
   size?: "sm" | "md" | "lg"
   equippedCosmetics?: EquippedCosmetics | null
   showAnimation?: boolean
+  useStoreEquipped?: boolean
 }
 
 export default function CharacterAvatar({
@@ -31,9 +32,13 @@ export default function CharacterAvatar({
   size = "md",
   equippedCosmetics: customEquipped,
   showAnimation = true,
+  useStoreEquipped = false,
 }: CharacterAvatarProps) {
   const storeEquipped = useGameStore((s) => s.userProfile?.equippedCosmetics)
-  const equipped = customEquipped ?? storeEquipped
+  let equipped: EquippedCosmetics | null | undefined = customEquipped
+  if (useStoreEquipped && customEquipped === undefined) {
+    equipped = storeEquipped ?? null
+  }
   const { gradient, emoji } = characterConfig[characterType]
   const sizes = sizeMap[size]
 

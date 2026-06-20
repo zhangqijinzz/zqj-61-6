@@ -14,7 +14,7 @@ export default function Cosmetics() {
   const userProfile = useGameStore((s) => s.userProfile)
   const equipCosmetic = useGameStore((s) => s.equipCosmetic)
   const unequipCosmetic = useGameStore((s) => s.unequipCosmetic)
-  const markVisitedCosmetics = useGameStore((s) => s.markVisitedCosmetics)
+  const markCosmeticsSeen = useGameStore((s) => s.markCosmeticsSeen)
   const checkAndUnlockCosmetics = useGameStore((s) => s.checkAndUnlockCosmetics)
 
   const [selectedCategory, setSelectedCategory] = useState<CosmeticCategory>("hat")
@@ -25,14 +25,14 @@ export default function Cosmetics() {
 
   useEffect(() => {
     if (userProfile) {
-      markVisitedCosmetics()
+      markCosmeticsSeen()
       const unlocked = checkAndUnlockCosmetics()
       if (unlocked.length > 0) {
         setNewlyUnlocked(unlocked)
         setShowUnlockModal(true)
       }
     }
-  }, [userProfile, markVisitedCosmetics, checkAndUnlockCosmetics])
+  }, [userProfile, markCosmeticsSeen, checkAndUnlockCosmetics])
 
   useEffect(() => {
     if (userProfile) {

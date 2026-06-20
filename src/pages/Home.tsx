@@ -28,6 +28,7 @@ export default function Home() {
   const missions = useGameStore((s) => s.missions)
   const checkAndUnlockCosmetics = useGameStore((s) => s.checkAndUnlockCosmetics)
   const checkInDaily = useGameStore((s) => s.checkInDaily)
+  const dismissCosmeticsGuide = useGameStore((s) => s.dismissCosmeticsGuide)
 
   const [showGuide, setShowGuide] = useState(false)
   const [showCheckInSuccess, setShowCheckInSuccess] = useState<{ streak: number; newCosmetics: string[] } | null>(null)
@@ -39,13 +40,16 @@ export default function Home() {
     }
 
     checkAndUnlockCosmetics()
+  }, [])
 
-    const shouldShowGuide =
-      userProfile.unlockedCosmetics.length > 0 &&
-      !userProfile.hasVisitedCosmetics
+  useEffect(() => {
+    if (!userProfile) return
 
-    setShowGuide(shouldShowGuide)
-  }, [userProfile, navigate, checkAndUnlockCosmetics])
+    const hasNew = userProfile.unlockedCosmetics.length > userProfile.lastSeenCosmeticsCount
+    const notDismissed = !userProfile.dismissedCosmeticsGuide
+
+    setShowGuide(hasNew && notDismissed)
+  }, [userProfile])
 
   const handleCheckIn = () => {
     const result = checkInDaily()
@@ -53,6 +57,11 @@ export default function Home() {
       setShowCheckInSuccess({ streak: result.streak, newCosmetics: result.newCosmetics })
       setTimeout(() => setShowCheckInSuccess(null), 3000)
     }
+  }
+
+  const handleCloseGuide = () => {
+    setShowGuide(false)
+    dismissCosmeticsGuide()
   }
 
   const scenarioProgress = useMemo(
@@ -120,7 +129,7 @@ export default function Home() {
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12" />
 
             <div className="max-w-lg mx-auto flex items-center gap-4 relative z-10">
-              <CharacterAvatar characterType={userProfile.characterType} size="lg" />
+              <CharacterAvatar characterType={userProfile.characterType} size="lg" useStoreEquipped={true} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-white font-display text-2xl truncate">
@@ -292,7 +301,7 @@ export default function Home() {
               <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-white/10 rounded-full" />
 
               <button
-                onClick={() => setShowGuide(false)}
+                onClick={handleCloseGuide}
                 className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/20 flex items-center justify-center z-10"
               >
                 <X className="w-4 h-4" />

@@ -14,7 +14,7 @@ const navItems = [
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const userProfile = useGameStore((s) => s.userProfile);
-  const hasNewCosmetics = userProfile && userProfile.unlockedCosmetics.length > 0 && !userProfile.hasVisitedCosmetics;
+  const hasNewCosmetics = userProfile && userProfile.unlockedCosmetics.length > userProfile.lastSeenCosmeticsCount;
 
   return (
     <div className="min-h-screen bg-adventure-cream">

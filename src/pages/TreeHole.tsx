@@ -68,6 +68,7 @@ export default function TreeHole() {
       replies: [],
       createdAt: new Date().toISOString(),
       likes: 0,
+      authorEquippedCosmetics: { ...userProfile.equippedCosmetics },
     }
     addPost(post)
     setNewContent("")
@@ -147,6 +148,7 @@ export default function TreeHole() {
                 <CharacterAvatar
                   characterType={post.authorCharacter}
                   size="sm"
+                  equippedCosmetics={post.authorEquippedCosmetics ?? null}
                 />
                 <span className="font-display text-adventure-blue">
                   {post.authorNickname}
